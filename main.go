@@ -125,8 +125,12 @@ func main() {
 	port := flag.Int("port", 8080, "Port for the HTTP server to listen on")
 
 	// Define a custom flag to allow multiple URLs.
-	var urls urlList
+	var urls stringList
 	flag.Var(&urls, "url", "URL to fetch from (can be specified multiple times)")
+
+	// Define a custom flag to allow multiple prefixes for filtering.
+	var prefixes stringList
+	flag.Var(&prefixes, "prefix", "Prefix for lines to include in the output (can be specified multiple times). If no prefixes are given, all lines are included.")
 
 	flag.Parse()
 
@@ -134,12 +138,18 @@ func main() {
 	if len(urls) == 0 {
 		log.Fatal("Error: At least one upstream URL must be specified with the -url flag.")
 	}
+
 	log.Printf("Configured to fetch from URLs: %v", urls)
+	if len(prefixes) > 0 {
+		log.Printf("Configured to filter metrics by prefixes: %v", prefixes)
+	} else {
+		log.Println("No prefixes specified, all metrics will be included.")
+	}
 
 	// Register the handler function for the root path.
 	// Use a closure to pass the configured URLs to the handler.
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		aggregatorHandler(w, r, urls)
+		aggregatorHandler(w, r, urls, prefixes)
 	})
 
 	addr := fmt.Sprintf(":%d", *port) // Corrected: addr should be defined after port is parsed

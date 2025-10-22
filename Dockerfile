@@ -3,11 +3,12 @@ FROM golang:1.22-alpine AS builder
 
 WORKDIR /app
 
-# Copy go.mod and go.sum files to leverage Docker cache
-COPY go.mod go.sum ./
+# Copy go.mod first. If there are no external dependencies, go.sum won't exist.
+COPY go.mod ./
 
-# Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed.
-RUN go mod download
+# Run go mod tidy. This will ensure go.mod is consistent and will create go.sum
+# if any dependencies are introduced. It also downloads dependencies.
+RUN go mod tidy
 
 # Copy the source code into the container AFTER downloading dependencies
 COPY *.go ./

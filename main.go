@@ -110,13 +110,11 @@ func main() {
 
 	flag.Parse()
 
-	// If no URLs are provided via flags, use the original defaults.
+	// If no URLs are provided via flags, exit with an error.
 	if len(urls) == 0 {
-		urls = []string{"http://localhost:1234", "http://localhost:5678"}
-		log.Printf("No URLs specified via -url flag, using defaults: %v", urls)
-	} else {
-		log.Printf("Configured to fetch from URLs: %v", urls)
+		log.Fatal("Error: At least one upstream URL must be specified with the -url flag.")
 	}
+	log.Printf("Configured to fetch from URLs: %v", urls)
 
 	// Register the handler function for the root path.
 	// Use a closure to pass the configured URLs to the handler.

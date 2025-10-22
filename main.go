@@ -90,8 +90,9 @@ func aggregatorHandler(w http.ResponseWriter, r *http.Request, urls []string) {
 		concatenatedBody += res.body
 	}
 
-	// If there were any errors during fetching, return an internal server error.
-	if len(errors) > 0 {
+	// Only return an error if all upstream fetches failed.
+	// Otherwise, we return the partial results.
+	if len(urls) > 0 && len(errors) == len(urls) {
 		http.Error(w, "Failed to fetch one or more upstream services.", http.StatusInternalServerError)
 		return
 	}

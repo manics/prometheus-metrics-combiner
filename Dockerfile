@@ -3,11 +3,14 @@ FROM golang:1.22-alpine AS builder
 
 WORKDIR /app
 
-# Initialize go module. This is required for `go build` in recent Go versions.
-RUN go mod init prometheus-metrics-combiner
+# Copy go.mod and go.sum files to leverage Docker cache
+COPY go.mod go.sum ./
 
-# Copy the source code into the container
-COPY main.go .
+# Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed.
+RUN go mod download
+
+# Copy the source code into the container AFTER downloading dependencies
+COPY *.go ./
 
 # Build the Go app, creating a static binary.
 # The -ldflags="-w -s" flag reduces the binary size.

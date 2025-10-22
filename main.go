@@ -1,13 +1,13 @@
 package main
 
 import (
-	"bufio" // New import for line-by-line scanning
+	"bufio"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"strings" // New import for strings.Builder and strings.HasPrefix
+	"strings"
 	"sync"
 )
 
@@ -42,7 +42,7 @@ func fetchURL(url string, ch chan<- result, wg *sync.WaitGroup) {
 	ch <- result{body: string(body)}
 }
 
-// stringList is a custom flag.Value type to allow multiple string flags (e.g., URLs or prefixes).
+// stringList is a custom flag.Value type to allow multiple string flags
 type stringList []string
 
 // String is the method to format the value of the flag.
@@ -66,9 +66,9 @@ func aggregatorHandler(w http.ResponseWriter, r *http.Request, urls []string, pr
 	}
 
 	var wg sync.WaitGroup
-	ch := make(chan result, len(urls)) // Buffer size matches the number of URLs
+	ch := make(chan result, len(urls))
 
-	wg.Add(len(urls)) // Add count for each URL
+	wg.Add(len(urls))
 	for _, u := range urls {
 		go fetchURL(u, ch, &wg)
 	}
@@ -79,7 +79,7 @@ func aggregatorHandler(w http.ResponseWriter, r *http.Request, urls []string, pr
 		close(ch)
 	}()
 
-	var concatenatedBody strings.Builder // Use strings.Builder for efficient string concatenation
+	var concatenatedBody strings.Builder
 	var errors []error
 
 	// Read results from the channel.
@@ -101,40 +101,37 @@ func aggregatorHandler(w http.ResponseWriter, r *http.Request, urls []string, pr
 				for _, p := range prefixes {
 					if strings.HasPrefix(line, p) {
 						concatenatedBody.WriteString(line)
-						concatenatedBody.WriteString("\n") // Add newline back
-						break                              // Found a match, move to next prefix check for this line
+						concatenatedBody.WriteString("\n")
+						break
 					}
 				}
 			}
 		}
 	}
 
-	// Only return an error if all upstream fetches failed.
-	// Otherwise, we return the partial results.
-	if len(urls) > 0 && len(errors) == len(urls) {
+	// Return an error if all fetches failed, otherwise return partial results
+	if len(errors) == len(urls) {
 		http.Error(w, "Failed to fetch one or more upstream services.", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	fmt.Fprint(w, concatenatedBody.String()) // Get the final string from the builder
+	fmt.Fprint(w, concatenatedBody.String())
 }
 
 func main() {
-	// Define a command-line flag for the port.
 	port := flag.Int("port", 8080, "Port for the HTTP server to listen on")
 
-	// Define a custom flag to allow multiple URLs.
+	// Custom flags to allow multiple URLs and prefixes
+
 	var urls stringList
 	flag.Var(&urls, "url", "URL to fetch from (can be specified multiple times)")
 
-	// Define a custom flag to allow multiple prefixes for filtering.
 	var prefixes stringList
 	flag.Var(&prefixes, "prefix", "Prefix for lines to include in the output (can be specified multiple times). If no prefixes are given, all lines are included.")
 
 	flag.Parse()
 
-	// If no URLs are provided via flags, exit with an error.
 	if len(urls) == 0 {
 		log.Fatal("Error: At least one upstream URL must be specified with the -url flag.")
 	}
@@ -146,16 +143,14 @@ func main() {
 		log.Println("No prefixes specified, all metrics will be included.")
 	}
 
-	// Register the handler function for the root path.
-	// Use a closure to pass the configured URLs to the handler.
+	// Register the handler function for root path
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		aggregatorHandler(w, r, urls, prefixes)
 	})
 
-	addr := fmt.Sprintf(":%d", *port) // Corrected: addr should be defined after port is parsed
+	addr := fmt.Sprintf(":%d", *port)
 	log.Printf("Starting server on %s", addr)
 
-	// Start the HTTP server.
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}

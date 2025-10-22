@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bufio" // New import for line-by-line scanning
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"strings" // New import for strings.Builder and strings.HasPrefix
 	"sync"
 )
 
@@ -40,22 +42,22 @@ func fetchURL(url string, ch chan<- result, wg *sync.WaitGroup) {
 	ch <- result{body: string(body)}
 }
 
-// urlList is a custom flag.Value type to allow multiple URL flags.
-type urlList []string
+// stringList is a custom flag.Value type to allow multiple string flags (e.g., URLs or prefixes).
+type stringList []string
 
 // String is the method to format the value of the flag.
-func (u *urlList) String() string {
-	return fmt.Sprintf("%v", *u)
+func (s *stringList) String() string {
+	return fmt.Sprintf("%v", *s)
 }
 
 // Set is the method to set the value of the flag. It appends the value to the slice.
-func (u *urlList) Set(value string) error {
-	*u = append(*u, value)
+func (s *stringList) Set(value string) error {
+	*s = append(*s, value)
 	return nil
 }
 
 // aggregatorHandler fetches content from multiple URLs, concatenates their bodies, and writes the result back.
-func aggregatorHandler(w http.ResponseWriter, r *http.Request, urls []string) {
+func aggregatorHandler(w http.ResponseWriter, r *http.Request, urls []string, prefixes []string) {
 	log.Printf("Received request for %s from %s, fetching from %v", r.URL.Path, r.RemoteAddr, urls)
 
 	if len(urls) == 0 {
@@ -77,7 +79,7 @@ func aggregatorHandler(w http.ResponseWriter, r *http.Request, urls []string) {
 		close(ch)
 	}()
 
-	var concatenatedBody string
+	var concatenatedBody strings.Builder // Use strings.Builder for efficient string concatenation
 	var errors []error
 
 	// Read results from the channel.
@@ -87,7 +89,24 @@ func aggregatorHandler(w http.ResponseWriter, r *http.Request, urls []string) {
 			errors = append(errors, res.err)
 			continue
 		}
-		concatenatedBody += res.body
+
+		if len(prefixes) == 0 {
+			// If no prefixes are specified, concatenate the entire body
+			concatenatedBody.WriteString(res.body)
+		} else {
+			// Otherwise, filter lines by prefix
+			scanner := bufio.NewScanner(strings.NewReader(res.body))
+			for scanner.Scan() {
+				line := scanner.Text()
+				for _, p := range prefixes {
+					if strings.HasPrefix(line, p) {
+						concatenatedBody.WriteString(line)
+						concatenatedBody.WriteString("\n") // Add newline back
+						break                              // Found a match, move to next prefix check for this line
+					}
+				}
+			}
+		}
 	}
 
 	// Only return an error if all upstream fetches failed.
@@ -98,7 +117,7 @@ func aggregatorHandler(w http.ResponseWriter, r *http.Request, urls []string) {
 	}
 
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	fmt.Fprint(w, concatenatedBody)
+	fmt.Fprint(w, concatenatedBody.String()) // Get the final string from the builder
 }
 
 func main() {

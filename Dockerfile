@@ -3,9 +3,8 @@ FROM golang:1.22-alpine AS builder
 
 WORKDIR /app
 
-# It's a good practice to initialize go modules.
-# RUN go mod init prometheus-metrics-combiner
-# RUN go mod tidy
+# Initialize go module. This is required for `go build` in recent Go versions.
+RUN go mod init prometheus-metrics-combiner
 
 # Copy the source code into the container
 COPY main.go .

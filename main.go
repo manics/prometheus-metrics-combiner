@@ -144,7 +144,7 @@ func main() {
 	}
 
 	// Register the handler function for root path
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
 		aggregatorHandler(w, r, urls, prefixes)
 	})
 

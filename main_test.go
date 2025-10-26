@@ -83,12 +83,13 @@ func TestAggregatorHandler(t *testing.T) {
 		},
 	}
 
+	verbose := false
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/metrics", nil)
 			rr := httptest.NewRecorder()
 
-			aggregatorHandler(rr, req, tc.urls, tc.prefixes)
+			aggregatorHandler(rr, req, tc.urls, tc.prefixes, &verbose)
 
 			if status := rr.Code; status != tc.expectedStatus {
 				t.Errorf("handler returned wrong status code: got %v want %v", status, tc.expectedStatus)

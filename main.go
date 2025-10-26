@@ -57,8 +57,10 @@ func (s *stringList) Set(value string) error {
 }
 
 // aggregatorHandler fetches content from multiple URLs, concatenates their bodies, and writes the result back.
-func aggregatorHandler(w http.ResponseWriter, r *http.Request, urls []string, prefixes []string) {
-	log.Printf("Received request for %s from %s, fetching from %v", r.URL.Path, r.RemoteAddr, urls)
+func aggregatorHandler(w http.ResponseWriter, r *http.Request, urls []string, prefixes []string, verbose *bool) {
+	if *verbose {
+		log.Printf("Received request for %s from %s, fetching from %v", r.URL.Path, r.RemoteAddr, urls)
+	}
 
 	if len(urls) == 0 {
 		http.Error(w, "No upstream URLs configured.", http.StatusInternalServerError)
@@ -121,6 +123,7 @@ func aggregatorHandler(w http.ResponseWriter, r *http.Request, urls []string, pr
 
 func main() {
 	port := flag.Int("port", 8080, "Port for the HTTP server to listen on")
+	verbose := flag.Bool("verbose", false, "Enable verbose logging")
 
 	// Custom flags to allow multiple URLs and prefixes
 
@@ -145,7 +148,7 @@ func main() {
 
 	// Register the handler function for root path
 	http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
-		aggregatorHandler(w, r, urls, prefixes)
+		aggregatorHandler(w, r, urls, prefixes, verbose)
 	})
 
 	addr := fmt.Sprintf(":%d", *port)

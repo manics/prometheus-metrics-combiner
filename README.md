@@ -1,4 +1,5 @@
 # Prometheus Metrics Combiner
+[![Build](https://github.com/manics/prometheus-metrics-combiner/actions/workflows/build.yml/badge.svg)](https://github.com/manics/prometheus-metrics-combiner/actions/workflows/build.yml)
 
 A simple HTTP server that fetches Prometheus metrics from multiple upstream services, combines them, and exposes them on a single `/metrics` endpoint.
 
